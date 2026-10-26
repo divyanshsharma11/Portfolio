@@ -146,12 +146,14 @@ All text lives in [`src/data.ts`](src/data.ts): profile, stats, experience, proj
 - No backend, no secrets, no cookies, no analytics. The event log stays in memory in your browser.
 - The only network call is to the public GitHub API. Responses and cached data are validated (shape and `https://github.com/` links) before they are rendered.
 - Fonts are self-hosted, so visitors' IPs are not sent to a font CDN.
-- Production builds ship a strict Content-Security-Policy (`default-src 'self'`, `connect-src` limited to `api.github.com`). Hosts that support response headers should also send it as a header, plus `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and `X-Frame-Options: DENY`.
+- Production builds ship a strict Content-Security-Policy (`default-src 'self'`, `connect-src` limited to `api.github.com`) as a meta tag. On Vercel, [`vercel.json`](vercel.json) also sends it as a response header with `frame-ancestors 'none'`, plus `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and `X-Frame-Options: DENY`. Vercel itself forces HTTPS and sends HSTS. The policy lives in `vite.config.ts` and `vercel.json`; change both together.
 - External links use `rel="noreferrer"` / `noopener`.
 
 ## Deploy
 
-The build output in `dist/` is static. It works on **Vercel**, **Netlify**, **Cloudflare Pages** or **GitHub Pages** with build command `npm run build` and output directory `dist`.
+Deployed on **Vercel**. [`vercel.json`](vercel.json) sets the build command (`npm run build`), the output directory (`dist`), the security headers and long-term caching for the content-hashed files in `/assets`. Import the GitHub repo in Vercel and it deploys on every push.
+
+The build output is static, so other hosts work too, but they need their own way to send the same headers.
 
 ---
 

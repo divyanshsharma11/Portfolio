@@ -2,7 +2,8 @@ import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 // Production-only: the dev server needs inline scripts and a websocket for hot reload, so it can't run under this policy.
-// Hosts that support response headers should send the same policy as a header too (see README).
+// vercel.json sends the same policy as a response header (plus frame-ancestors, which only works as a header):
+// change both together.
 const CSP = [
   "default-src 'self'",
   "script-src 'self'",
