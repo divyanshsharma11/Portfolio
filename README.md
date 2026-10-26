@@ -4,7 +4,7 @@
 
 **Backend & Integration Engineer**: OAuth flows, webhooks, queues and data sync.
 
-This portfolio is not a scrolling page. It is a small integration layer you can poke at: raw data on one side, a readable profile on the other, and a live core in the middle.
+This portfolio is not a scrolling page on desktop: it is one fixed screen, a small integration layer you can poke at, with raw data on one side, a readable profile on the other, and a live core in the middle. On phones it becomes a normal scrolling page: the profile card first, the raw data collapsed, and the core below it, which you can drag to spin.
 
 ![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)

@@ -36,22 +36,22 @@ type Readout = {
   tx: number
   box: Box
 }
-type Props = { active: SectionId | null; onOpen: (s: SectionId, target?: string) => void; dim: boolean }
+type Props = { active: SectionId | null; onOpen: (s: SectionId, target?: string) => void; compact: boolean }
 
 // Per-frame easing factor tuned for 60fps, converted so the motion takes the same time at any frame rate.
 const smooth = (k: number, dt: number) => 1 - Math.pow(1 - k, dt / 16.7)
 const wrapAngle = (a: number) => Math.atan2(Math.sin(a), Math.cos(a))
 
-export default function Core({ active, onOpen, dim }: Props) {
+export default function Core({ active, onOpen, compact }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
   const [tip, setTip] = useState<{ label: string; note: string; x: number; y: number } | null>(null)
   const [live, setLive] = useState('') // screen-reader announcement for the keyboard selection
   const activeRef = useRef(active)
   const openRef = useRef(onOpen)
-  const dimRef = useRef(dim)
+  const compactRef = useRef(compact)
   activeRef.current = active
   openRef.current = onOpen
-  dimRef.current = dim
+  compactRef.current = compact
 
   useEffect(() => {
     const canvas = ref.current!
@@ -112,9 +112,11 @@ export default function Core({ active, onOpen, dim }: Props) {
       const heroW = panel ? 0 : heroWidth(w)
       const panelW = panel ? panelWidth(w) : 0
       const areaW = w - heroW - panelW
+      const phone = compactRef.current
       const tx = heroW + areaW / 2
       const ty = h * 0.5
-      const tR = Math.max(120, Math.min(areaW / 2 - 110, (h - 110) / 2 - 40))
+      // Phone: the canvas is its own block, so use all of it. Connector dots sit at 0.82R and there are no text labels.
+      const tR = phone ? (Math.min(w, h) / 2 - 10) / 0.86 : Math.max(120, Math.min(areaW / 2 - 110, (h - 110) / 2 - 40))
       const k = placed ? smooth(0.08, dt) : 1
       placed = true
       cx += (tx - cx) * k
@@ -224,8 +226,8 @@ export default function Core({ active, onOpen, dim }: Props) {
       ctx.globalAlpha = 1
 
       // Readouts show the real state of the site. Their boxes are worked out first so node labels can steer clear.
-      // As a dimmed backdrop behind the hero (small screens) the core shows no text at all: it would only peek out in fragments.
-      const quiet = dimRef.current
+      // On phones the core shows no connector labels or readouts: there is no hover, and they would clip at this size.
+      const quiet = compactRef.current
       const hudA = ease((p - 0.85) / 0.15)
       const hud: Readout[] = []
       if (hudA > 0 && R > 150 && !quiet) {
@@ -673,10 +675,10 @@ export default function Core({ active, onOpen, dim }: Props) {
   }, [])
 
   return (
-    <>
+    <div className="core-wrap">
       <canvas
         ref={ref}
-        className={`core ${dim ? 'dim' : ''}`}
+        className="core"
         tabIndex={0}
         role="application"
         aria-roledescription="interactive diagram"
@@ -691,6 +693,6 @@ export default function Core({ active, onOpen, dim }: Props) {
           <span>{tip.note}</span>
         </div>
       )}
-    </>
+    </div>
   )
 }
