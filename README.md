@@ -8,7 +8,7 @@ This portfolio is not a scrolling page. It is a small integration layer you can 
 
 ![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-5-646cff?logo=vite&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6-646cff?logo=vite&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-vitest-6e9f18?logo=vitest&logoColor=white)
 
 [GitHub](https://github.com/divyanshsharma11) · [LinkedIn](https://www.linkedin.com/in/divyansh-sharma1121/) · [Email](mailto:divyanshsharma1121@gmail.com)
@@ -19,14 +19,16 @@ This portfolio is not a scrolling page. It is a small integration layer you can 
 
 ## What you can do on the site
 
-| Interaction                           | What happens                                                                                                                                                                                       |
-| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Read the card**                     | Name, role, experience, integrations, credential and availability are visible in the first screen.                                                                                                 |
-| **Drag a field onto the card**        | The left side is a raw `profile.json`. Drag a field onto a slot (or click a field, then a slot) to remap it. Types are validated: dropping a number on a name slot is rejected with a `TypeError`. |
-| **Hover or click the core**           | Hover an outer connector to see what I built with that integration. Click a segment to open About, Experience, Projects, Pipeline Lab or Contact in a side panel.                                  |
-| **Flip "Break it" in the status bar** | Cuts the site's live GitHub connection on purpose. Watch retries, the circuit breaker opening, the fallback to cached data and the automatic recovery in the event log.                            |
-| **Press `Ctrl` + `K`**                | Command palette: jump to a section, toggle Break it, open links, download the résumé.                                                                                                              |
-| **Share a link like `/#projects`**    | Opens straight on that section.                                                                                                                                                                    |
+| Interaction                           | What happens                                                                                                                                                                                                                                                                              |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Read the card**                     | Name, role, experience, integrations, credential and availability are visible in the first screen.                                                                                                                                                                                        |
+| **Drag a field onto the card**        | The left side is a raw `profile.json`. Drag a field onto a slot (or click a field, then a slot) to remap it. Types are validated: dropping a number on a name slot is rejected with a `TypeError`.                                                                                        |
+| **Spin the core**                     | Drag anywhere around the core to rotate both rings; release with a flick and it keeps its momentum.                                                                                                                                                                                       |
+| **Click a connector**                 | Hover an outer connector to see what I built with it. Click it to jump to the matching card: M32.ai integrations open the M32.ai role, Vodex.AI ones the Vodex.AI role, and each project has its own connector. Gmail belongs to both roles, so clicking it again jumps to the other one. |
+| **Click a segment**                   | Opens About, Experience, Projects, Pipeline Lab or Contact in a side panel.                                                                                                                                                                                                               |
+| **Flip "Break it" in the status bar** | Cuts the site's live GitHub connection on purpose. Watch retries, the circuit breaker opening, the fallback to cached data and the automatic recovery in the event log.                                                                                                                   |
+| **Press `Ctrl` + `K`**                | Command palette: jump to a section, toggle Break it, open links, download the résumé.                                                                                                                                                                                                     |
+| **Share a link like `/#projects`**    | Opens straight on that section.                                                                                                                                                                                                                                                           |
 
 Everything the core's readouts show (GitHub state, breaker state, packet flux) is the site's real state.
 
@@ -113,7 +115,7 @@ src/
 
 ## Run it locally
 
-Requires **Node.js 18+**.
+Requires **Node.js 20+** (the test runner, Vitest 4, does not support Node 18).
 
 ```bash
 git clone https://github.com/divyanshsharma11/Portfolio.git

@@ -27,6 +27,7 @@ export const stats = [
 
 export const experience = [
   {
+    id: 'exp-m32',
     company: 'M32.ai',
     title: 'Integrations Engineer',
     period: 'Dec 2025 – Aug 2026',
@@ -42,6 +43,7 @@ export const experience = [
     tags: ['Node.js', 'OAuth 2.0', 'Webhooks', 'Pub/Sub', 'Polling workers', 'Stripe Connect'],
   },
   {
+    id: 'exp-vodex',
     company: 'Vodex.AI',
     title: 'Software Developer',
     period: 'Aug 2024 – Nov 2025',
@@ -55,6 +57,7 @@ export const experience = [
     tags: ['Node.js', 'Redis', 'BullMQ', 'JWT', 'HubSpot', 'Google APIs'],
   },
   {
+    id: 'exp-capgemini',
     company: 'Capgemini Engineering',
     title: 'Associate II Software Engineer',
     period: 'Jul 2022 – Aug 2024',
@@ -70,30 +73,39 @@ export const experience = [
 
 export const projects = [
   {
+    id: 'calendlyIntegration',
     name: 'calendlyIntegration',
+    tagline: 'OAuth2, webhooks and a BullMQ worker',
     blurb:
       'Calendly backend with OAuth2 token exchange/refresh, paginated idempotent event sync, and a webhook receiver that acknowledges fast and processes in a separate BullMQ worker with exponential-backoff retries.',
     tags: ['Node.js', 'Express', 'MongoDB', 'BullMQ', 'Redis', 'Docker', 'Swagger'],
     href: 'https://github.com/divyanshsharma11/calendlyIntegration',
   },
   {
+    id: 'luduscore',
     name: 'luduscore',
+    tagline: 'explainable game-recommendation package',
     blurb:
       'Explainable, rule-based game recommender published as a pip package. Scores titles across difficulty, genre, playstyle, multiplayer and story weight, and returns the reasons behind every score.',
     tags: ['Python', 'pytest', 'pyproject', 'MIT'],
     href: 'https://github.com/divyanshsharma11/luduscore',
   },
   {
+    id: 'hubSpot-Integration',
     name: 'hubSpot-Integration',
+    tagline: 'HubSpot CRM sync to MongoDB',
     blurb:
       'Syncs HubSpot CRM contacts into MongoDB, sends welcome emails, and optionally writes conditional notes back to HubSpot. Deployed on Vercel.',
     tags: ['Node.js', 'HubSpot API', 'MongoDB', 'Vercel'],
     href: 'https://github.com/divyanshsharma11/hubSpot-Integration',
   },
   {
+    id: 'fetchAndSendStock',
     name: 'fetchAndSendStock',
-    blurb: 'Web scraper that fetches stock data and emails it on a schedule.',
-    tags: ['Node.js', 'Scraping', 'Email'],
+    tagline: 'Express API that fetches stock data and emails it as JSON or CSV',
+    blurb:
+      'Express API with endpoints to fetch stock data for a symbol and to email it as a JSON or CSV attachment using Nodemailer. Includes Vercel deployment config.',
+    tags: ['Node.js', 'Express', 'Nodemailer', 'Vercel'],
     href: 'https://github.com/divyanshsharma11/fetchAndSendStock',
   },
 ]
@@ -105,75 +117,50 @@ export const skills = [
   { group: 'Cloud & Tools', items: ['GCP Pub/Sub', 'Docker', 'Git', 'GitHub', 'Postman'] },
 ]
 
-// Shown on the core's outer ring. All from work experience except Calendly, which is a personal project.
-export const integrations: { key: string; label: string; section: SectionId; note: string }[] = [
-  {
-    key: 'stripe',
-    label: 'Stripe Connect',
-    section: 'experience',
-    note: 'Connect OAuth, signed webhooks, multi-account billing actions (M32.ai)',
-  },
+// Connectors on the core's outer ring. Clicking one opens its section and scrolls to a matching card.
+// `targets` lists the card ids it can jump to; with more than one, repeated clicks cycle through them.
+type Connector = { key: string; label: string; section: SectionId; targets: string[]; note: string }
+
+const m32 = (key: string, label: string, note: string): Connector => ({
+  key,
+  label,
+  section: 'experience',
+  targets: ['exp-m32'],
+  note: `${note} (M32.ai)`,
+})
+const vodex = (key: string, label: string, note: string): Connector => ({
+  key,
+  label,
+  section: 'experience',
+  targets: ['exp-vodex'],
+  note: `${note} (Vodex.AI)`,
+})
+
+export const integrations: Connector[] = [
+  m32('stripe', 'Stripe Connect', 'Connect OAuth, signed webhooks, multi-account billing actions'),
   {
     key: 'gmail',
     label: 'Gmail',
     section: 'experience',
-    note: 'Event-driven email channel via Pub/Sub with AI replies in-thread (M32.ai)',
+    targets: ['exp-m32', 'exp-vodex'],
+    note: 'M32.ai: event-driven email channel via Pub/Sub. Vodex.AI: Gmail OAuth for sign-in. Click again for the other role.',
   },
-  {
-    key: 'make',
-    label: 'Make.com',
-    section: 'experience',
-    note: 'Connector app from scratch: OAuth2, webhook + polling triggers (M32.ai)',
-  },
-  { key: 'clio', label: 'Clio', section: 'experience', note: 'Two-way contact sync and appointment booking (M32.ai)' },
-  {
-    key: 'cloudbeds',
-    label: 'Cloudbeds',
-    section: 'experience',
-    note: 'Guest lookup, room availability and reservations (M32.ai)',
-  },
-  {
-    key: 'nexhealth',
-    label: 'NexHealth',
-    section: 'experience',
-    note: 'Athenahealth + eClinicalWorks patient lookup and booking (M32.ai)',
-  },
-  {
-    key: 'meta',
-    label: 'Meta Ads',
-    section: 'experience',
-    note: 'Server-side conversion tracking via Conversions API (M32.ai)',
-  },
-  {
-    key: 'youtube',
-    label: 'YouTube',
-    section: 'experience',
-    note: 'Comment automation with a polling worker (M32.ai)',
-  },
-  {
-    key: 'calcom',
-    label: 'Cal.com',
-    section: 'experience',
-    note: 'Events, slot checks and meeting booking APIs (Vodex.AI)',
-  },
-  {
-    key: 'hubspot',
-    label: 'HubSpot',
-    section: 'experience',
-    note: 'OAuth CRM sync (Vodex.AI) and a personal sync project',
-  },
-  {
-    key: 'sheets',
-    label: 'Google Sheets',
-    section: 'experience',
-    note: 'Batched account-wide reads and updates (Vodex.AI)',
-  },
-  {
-    key: 'calendly',
-    label: 'Calendly',
+  m32('make', 'Make.com', 'Connector app from scratch: OAuth2, webhook + polling triggers'),
+  m32('clio', 'Clio', 'Two-way contact sync and appointment booking'),
+  m32('cloudbeds', 'Cloudbeds', 'Guest lookup, room availability and reservations'),
+  m32('nexhealth', 'NexHealth', 'Athenahealth + eClinicalWorks patient lookup and booking'),
+  m32('meta', 'Meta Ads', 'Server-side conversion tracking via Conversions API'),
+  m32('youtube', 'YouTube', 'Comment automation with a polling worker'),
+  vodex('calcom', 'Cal.com', 'Events, slot checks and meeting booking APIs'),
+  vodex('hubspot', 'HubSpot', 'OAuth CRM sync'),
+  vodex('sheets', 'Google Sheets', 'Batched account-wide reads and updates'),
+  ...projects.map((p): Connector => ({
+    key: p.id,
+    label: p.name,
     section: 'projects',
-    note: 'Personal project: OAuth2 + webhooks + BullMQ worker backend',
-  },
+    targets: [p.id],
+    note: `Personal project: ${p.tagline}`,
+  })),
 ]
 
 export const education = {

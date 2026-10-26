@@ -21,6 +21,7 @@ const fromHash = (): SectionId | null => {
 
 export default function App() {
   const [active, setActive] = useState<SectionId | null>(fromHash)
+  const [focus, setFocus] = useState<{ id: string; n: number } | null>(null)
   const [palette, setPalette] = useState(false)
   const [wideScreen, setWideScreen] = useState(() => window.innerWidth >= 1280)
   const resume = useResume()
@@ -32,10 +33,12 @@ export default function App() {
     return () => window.removeEventListener('resize', onResize)
   }, [])
 
-  const open = useCallback((s: SectionId | null) => {
+  // `target` is the id of a card inside the section; `n` makes repeated clicks on the same target fire again.
+  const open = useCallback((s: SectionId | null, target?: string) => {
     setActive(s)
+    setFocus(target ? { id: target, n: Date.now() } : null)
     history.replaceState(null, '', s ? `#${s}` : window.location.pathname)
-    if (s) log(`section.opened: ${s}`)
+    if (s) log(`section.opened: ${s}${target ? ` → ${target}` : ''}`)
   }, [])
 
   useEffect(() => {
@@ -125,7 +128,7 @@ export default function App() {
             <div className="panel-body">
               <h2>{TITLES[active]}</h2>
               <motion.div key={active} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-                <PanelBody id={active} />
+                <PanelBody id={active} focus={focus} />
               </motion.div>
             </div>
           </motion.aside>

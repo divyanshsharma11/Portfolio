@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowUpRight, Mail, GraduationCap, Copy, Check, BadgeCheck, FileText } from 'lucide-react'
 import { useResume } from '../lib/resume'
 import { profile, experience, projects, skills, education, stats, certification } from '../data'
@@ -91,7 +91,25 @@ function Contact() {
   )
 }
 
-export function PanelBody({ id }: { id: SectionId }) {
+// Opening a section from a core connector scrolls to the matching card and flashes it; otherwise start at the top.
+function useFocusCard(section: SectionId, focus: { id: string; n: number } | null) {
+  useEffect(() => {
+    const scroller = document.querySelector('.panel-body')
+    const card = focus ? document.getElementById(focus.id) : null
+    if (!card) return void scroller?.scrollTo({ top: 0 })
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const t = setTimeout(() => {
+      card.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+      card.classList.remove('flash')
+      void card.offsetWidth // restart the animation when the same card is targeted twice
+      card.classList.add('flash')
+    }, 120) // let the panel finish mounting before measuring
+    return () => clearTimeout(t)
+  }, [section, focus])
+}
+
+export function PanelBody({ id, focus }: { id: SectionId; focus: { id: string; n: number } | null }) {
+  useFocusCard(id, focus)
   switch (id) {
     case 'about':
       return (
@@ -131,7 +149,7 @@ export function PanelBody({ id }: { id: SectionId }) {
       return (
         <div className="stack">
           {experience.map((e) => (
-            <article key={e.company} className="card">
+            <article key={e.company} id={e.id} className="card">
               <h3>
                 {e.title} <span>@ {e.company}</span>
               </h3>
@@ -154,7 +172,7 @@ export function PanelBody({ id }: { id: SectionId }) {
         <div className="stack">
           <LiveGithub />
           {projects.map((p) => (
-            <a key={p.name} className="card project" href={p.href} target="_blank" rel="noreferrer">
+            <a key={p.name} id={p.id} className="card project" href={p.href} target="_blank" rel="noreferrer">
               <h3>
                 {p.name} <ArrowUpRight size={18} />
               </h3>
