@@ -216,7 +216,7 @@ kbd {
 @media (min-width: 1280px) {
   .hero-wrap {
     right: auto;
-    width: min(780px, max(46vw, 660px));
+    width: min(624px, max(40vw, 540px));
     padding: 12px 8px 12px 36px;
     justify-content: flex-start;
   }
@@ -224,7 +224,7 @@ kbd {
 @media (not (max-width: 900px)) and (not (min-width: 1280px)) {
   .hero-wrap {
     right: auto;
-    width: 660px;
+    width: 540px;
     padding: 12px 8px 12px 24px;
     justify-content: flex-start;
   }
@@ -306,6 +306,12 @@ kbd {
 .hero.wide .map-grid {
   grid-template-columns: minmax(0, 1fr) 40px minmax(0, 1.1fr);
   align-items: center;
+}
+/* Beside the core the mapping is drawn at 80% size; src/layout.ts sizes the hero column for it (MID_HERO_W, HERO_MAX_W). */
+@media (not (max-width: 900px)) {
+  .hero.wide .map-grid {
+    zoom: 0.8;
+  }
 }
 .hero:not(.wide) .dest {
   order: -1;
