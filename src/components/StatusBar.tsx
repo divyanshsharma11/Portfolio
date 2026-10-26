@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ago, useSystem } from '../lib/system'
+import { ago, useNow, useSystem } from '../lib/system'
 import { setChaos } from '../lib/github'
 
 const FEED_LABEL = { connecting: 'connecting', live: 'live', cached: 'cached', offline: 'offline' } as const
 
 export default function StatusBar() {
   const s = useSystem()
+  useNow() // keeps "last push … ago" current
   const [open, setOpen] = useState(false)
   const opened = useRef(false)
   const lastPush = s.github?.recent[0]?.pushed_at

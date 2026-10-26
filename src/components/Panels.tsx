@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { ArrowUpRight, Mail, GraduationCap, Copy, Check, BadgeCheck, FileText } from 'lucide-react'
 import { useResume } from '../lib/resume'
 import { profile, experience, projects, skills, education, stats, certification } from '../data'
-import { ago, useSystem } from '../lib/system'
+import { ago, useNow, useSystem } from '../lib/system'
 import PipelineLab from './PipelineLab'
 import type { SectionId } from '../sections'
 
 function LiveGithub() {
   const { github, feed, breaker } = useSystem()
+  useNow() // keeps the "… ago" times current
   return (
     <div className={`card live ${feed}`}>
       <h3>
@@ -136,7 +137,7 @@ export function PanelBody({ id, focus }: { id: SectionId; focus: { id: string; n
             </div>
           ))}
           <h4>Credentials</h4>
-          <a className="edu cert" href={certification.url} target="_blank" rel="noreferrer">
+          <a id="credentials" className="edu cert" href={certification.url} target="_blank" rel="noreferrer">
             <BadgeCheck size={18} /> {certification.name} · {certification.issuer} <ArrowUpRight size={14} />
           </a>
           <p className="edu">

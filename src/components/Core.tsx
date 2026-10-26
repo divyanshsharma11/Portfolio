@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { SECTIONS, type SectionId } from '../sections'
 import { integrations } from '../data'
-import { system } from '../lib/system'
+import { setLink, system } from '../lib/system'
+import { heroWidth, panelWidth } from '../layout'
 
 const TAU = Math.PI * 2
 const SPAN = TAU / SECTIONS.length
@@ -44,10 +45,13 @@ const wrapAngle = (a: number) => Math.atan2(Math.sin(a), Math.cos(a))
 export default function Core({ active, onOpen, dim }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
   const [tip, setTip] = useState<{ label: string; note: string; x: number; y: number } | null>(null)
+  const [live, setLive] = useState('') // screen-reader announcement for the keyboard selection
   const activeRef = useRef(active)
   const openRef = useRef(onOpen)
+  const dimRef = useRef(dim)
   activeRef.current = active
   openRef.current = onOpen
+  dimRef.current = dim
 
   useEffect(() => {
     const canvas = ref.current!
@@ -86,6 +90,7 @@ export default function Core({ active, onOpen, dim }: Props) {
     const packets: Packet[] = []
     const arrivals: number[] = []
     const cycle: number[] = new Array(N).fill(0) // per-connector click counter, for connectors with several targets
+    const workNodes = integrations.flatMap((it, i) => (it.section === 'experience' ? [i] : []))
     let areaL = 0, // horizontal space actually visible to the core (not under the hero card or the panel)
       areaR = 0
 
@@ -101,11 +106,11 @@ export default function Core({ active, onOpen, dim }: Props) {
     const ro = new ResizeObserver(resize)
     ro.observe(canvas)
 
-    // The core sits beside the hero on wide screens, beside an open panel, or centred behind everything on small screens.
+    // The core sits beside the hero (see layout.ts), beside an open panel, or centred behind everything on small screens.
     const layout = (dt: number) => {
       const panel = !!activeRef.current
-      const heroW = !panel && w >= 1280 ? Math.min(780, w * 0.5) : 0
-      const panelW = panel && w >= 1000 ? Math.min(600, w) : 0
+      const heroW = panel ? 0 : heroWidth(w)
+      const panelW = panel ? panelWidth(w) : 0
       const areaW = w - heroW - panelW
       const tx = heroW + areaW / 2
       const ty = h * 0.5
@@ -154,6 +159,7 @@ export default function Core({ active, onOpen, dim }: Props) {
       layout(dt)
 
       const s = system.get()
+      const linkCard = s.link === 'card' // the hero card's platform list is being pointed at
       const degraded = s.breaker === 'open' || s.feed === 'offline'
       const recovering = s.breaker === 'half-open'
       intensity += ((degraded ? 0.38 : recovering ? 0.68 : 1) * ease(p * 1.4) - intensity) * smooth(0.06, dt)
@@ -218,9 +224,11 @@ export default function Core({ active, onOpen, dim }: Props) {
       ctx.globalAlpha = 1
 
       // Readouts show the real state of the site. Their boxes are worked out first so node labels can steer clear.
+      // As a dimmed backdrop behind the hero (small screens) the core shows no text at all: it would only peek out in fragments.
+      const quiet = dimRef.current
       const hudA = ease((p - 0.85) / 0.15)
       const hud: Readout[] = []
-      if (hudA > 0 && R > 150) {
+      if (hudA > 0 && R > 150 && !quiet) {
         const feedCol = s.feed === 'live' ? OK : s.feed === 'cached' ? WARN : s.feed === 'offline' ? BAD : '#9aa0ad'
         const rows: [number, string, string, string][] = [
           [
@@ -270,11 +278,14 @@ export default function Core({ active, onOpen, dim }: Props) {
           })
         }
       }
-      // A label is drawn only if it is fully inside the visible area and does not touch a readout; the node itself always is.
+      // A label is drawn only if it is fully inside the visible area and touches neither a readout nor another label;
+      // the node itself is always drawn, and its name still shows in the tooltip.
+      const taken: Box[] = hud.map((o) => o.box)
       const labelFits = (l: number, r: number, t: number, b: number) =>
+        !quiet &&
         l >= areaL + 4 &&
         r <= areaR - 4 &&
-        !hud.some((o) => l < o.box.r + 4 && r > o.box.l - 4 && t < o.box.b + 4 && b > o.box.t - 4)
+        !taken.some((o) => l < o.r + 4 && r > o.l - 4 && t < o.b + 4 && b > o.t - 4)
 
       // integration connectors and their conduits
       for (let n = 0; n < N; n++) {
@@ -283,7 +294,10 @@ export default function Core({ active, onOpen, dim }: Props) {
         const { x, y, a: ang } = nodePos(n)
         const it = integrations[n]
         const col = COLOR[it.section]
-        const hot = hoverNode === n || (hoverSeg >= 0 && SECTIONS[hoverSeg].id === it.section)
+        const hot =
+          hoverNode === n ||
+          (hoverSeg >= 0 && SECTIONS[hoverSeg].id === it.section) ||
+          (linkCard && it.section === 'experience')
         ctx.globalAlpha = a
         ctx.strokeStyle = hot ? col : 'rgba(150,160,190,0.12)'
         ctx.lineWidth = hot ? 1.5 : 1
@@ -318,6 +332,7 @@ export default function Core({ active, onOpen, dim }: Props) {
         const ll = align === 'left' ? lx : align === 'right' ? lx - lw : lx - lw / 2
         const lt = baseline === 'top' ? ly : baseline === 'bottom' ? ly - fs : ly - fs / 2
         if (labelFits(ll, ll + lw, lt, lt + fs)) {
+          taken.push({ l: ll, r: ll + lw, t: lt, b: lt + fs })
           ctx.textAlign = align
           ctx.textBaseline = baseline
           ctx.fillStyle = hot ? '#ecebe6' : 'rgba(154,160,173,0.85)'
@@ -331,12 +346,12 @@ export default function Core({ active, onOpen, dim }: Props) {
         spawn -= dt
         if (spawn <= 0) {
           packets.push({
-            node: Math.floor(Math.random() * N),
+            node: linkCard ? workNodes[Math.floor(Math.random() * workNodes.length)] : Math.floor(Math.random() * N),
             t: 0,
             speed: 0.35 + Math.random() * 0.25,
             drop: degraded && Math.random() < 0.65 ? 0.25 + Math.random() * 0.35 : 2,
           })
-          spawn = (degraded ? 520 : 240) * (hoverSeg >= 0 || hoverNode >= 0 ? 0.5 : 1)
+          spawn = (degraded ? 520 : 240) * (hoverSeg >= 0 || hoverNode >= 0 || linkCard ? 0.5 : 1)
         }
       }
       for (let i = packets.length - 1; i >= 0; i--) {
@@ -498,7 +513,13 @@ export default function Core({ active, onOpen, dim }: Props) {
       mouse.y = e.clientY - b.top
     }
     const angleOf = () => Math.atan2(mouse.y - cy, mouse.x - cx)
+    // Hovering a work-platform connector lights the matching slot on the hero card.
+    const syncLink = () => {
+      if (hoverNode >= 0 && integrations[hoverNode].section === 'experience') setLink('core')
+      else if (system.get().link === 'core') setLink(null)
+    }
     const showTip = () => {
+      syncLink()
       if (hoverNode !== tipNode) {
         tipNode = hoverNode
         if (hoverNode < 0) setTip(null)
@@ -574,12 +595,17 @@ export default function Core({ active, onOpen, dim }: Props) {
       mouse.x = mouse.y = -1e4
       hoverSeg = hoverNode = tipNode = -1
       setTip(null)
+      syncLink()
     }
     const onClick = () => {
       if (suppressClick) {
         suppressClick = false
         return
       }
+      activate()
+    }
+    // Opens whatever is currently hovered or keyboard-selected.
+    const activate = () => {
       if (hoverSeg >= 0) {
         snap = true
         openRef.current(SECTIONS[hoverSeg].id)
@@ -589,13 +615,52 @@ export default function Core({ active, onOpen, dim }: Props) {
         openRef.current(it.section, it.targets[cycle[hoverNode]++ % it.targets.length])
       }
     }
+
+    // Keyboard: Left/Right spin the core, Up/Down step through the sections then the connectors, Enter/Space open.
+    const ITEMS = SECTIONS.length + N
+    let kb = -1
+    const select = (i: number) => {
+      kb = i
+      hoverSeg = i < SECTIONS.length ? i : -1
+      hoverNode = i >= SECTIONS.length ? i - SECTIONS.length : -1
+      showTip()
+      const what =
+        hoverSeg >= 0
+          ? `${SECTIONS[hoverSeg].title} section`
+          : `${integrations[hoverNode].label}: ${integrations[hoverNode].note}`
+      setLive(`${what.replace(/\.$/, '')}. ${i + 1} of ${ITEMS}. Press Enter to open.`)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        snap = false
+        vel += e.key === 'ArrowRight' ? 0.0015 : -0.0015
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        select((Math.max(kb, 0) + (e.key === 'ArrowDown' ? 1 : -1) + ITEMS) % ITEMS)
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        if (kb >= 0) activate()
+      } else return
+      e.preventDefault()
+    }
+    const onFocus = () => select(Math.max(kb, 0))
+    const onBlur = () => {
+      hoverSeg = hoverNode = -1
+      showTip()
+      setLive('')
+    }
+
     canvas.addEventListener('pointerdown', onDown)
     canvas.addEventListener('pointermove', onMove)
     canvas.addEventListener('pointerup', onUp)
     canvas.addEventListener('pointercancel', onUp)
     canvas.addEventListener('pointerleave', onLeave)
     canvas.addEventListener('click', onClick)
+    canvas.addEventListener('keydown', onKey)
+    canvas.addEventListener('focus', onFocus)
+    canvas.addEventListener('blur', onBlur)
     return () => {
+      canvas.removeEventListener('keydown', onKey)
+      canvas.removeEventListener('focus', onFocus)
+      canvas.removeEventListener('blur', onBlur)
       cancelAnimationFrame(raf)
       ro.disconnect()
       canvas.removeEventListener('pointerdown', onDown)
@@ -612,9 +677,14 @@ export default function Core({ active, onOpen, dim }: Props) {
       <canvas
         ref={ref}
         className={`core ${dim ? 'dim' : ''}`}
-        role="img"
-        aria-label="Integration core: sections and integrations orbiting a central core"
+        tabIndex={0}
+        role="application"
+        aria-roledescription="interactive diagram"
+        aria-label="Integration core. Up and Down arrows step through sections and connectors, Enter opens one, Left and Right arrows spin the core."
       />
+      <span className="sr-only" aria-live="polite">
+        {live}
+      </span>
       {tip && (
         <div className="tip" style={{ left: tip.x, top: tip.y - 18 }}>
           <b>{tip.label}</b>

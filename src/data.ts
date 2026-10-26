@@ -18,13 +18,6 @@ export const certification = {
   url: 'https://www.credly.com/badges/6144319d-d69b-4468-98b6-0e0e71f4b3ff/public_url',
 }
 
-export const stats = [
-  { value: '4+', label: 'Years in production backends (since Jul 2022)' },
-  { value: '16', label: 'Third-party platforms integrated at work' },
-  { value: '30%', label: 'Performance gain from Redis + BullMQ' },
-  { value: '3', label: 'Companies, from enterprise to AI startups' },
-]
-
 export const experience = [
   {
     id: 'exp-m32',
@@ -148,8 +141,13 @@ export const integrations: Connector[] = [
   m32('make', 'Make.com', 'Connector app from scratch: OAuth2, webhook + polling triggers'),
   m32('clio', 'Clio', 'Two-way contact sync and appointment booking'),
   m32('cloudbeds', 'Cloudbeds', 'Guest lookup, room availability and reservations'),
-  m32('nexhealth', 'NexHealth', 'Athenahealth + eClinicalWorks patient lookup and booking'),
-  m32('meta', 'Meta Ads', 'Server-side conversion tracking via Conversions API'),
+  m32('nexhealth', 'NexHealth', 'Integration layer used to reach Athenahealth and eClinicalWorks'),
+  m32('athenahealth', 'Athenahealth', 'Patient lookup, appointment booking and availability checks, via NexHealth'),
+  m32('eclinicalworks', 'eClinicalWorks', 'Patient lookup, appointment booking and availability checks, via NexHealth'),
+  m32('googleads', 'Google Ads', 'Server-side conversion tracking with OAuth onboarding and async postbacks'),
+  m32('meta', 'Meta Ads', 'Server-side conversion tracking via the Conversions API'),
+  m32('instagram', 'Instagram', 'Keyword comment triggers, public replies, DMs and scheduled follow-ups'),
+  m32('facebook', 'Facebook', 'Keyword comment triggers, public replies, DMs and scheduled follow-ups'),
   m32('youtube', 'YouTube', 'Comment automation with a polling worker'),
   vodex('calcom', 'Cal.com', 'Events, slot checks and meeting booking APIs'),
   vodex('hubspot', 'HubSpot', 'OAuth CRM sync'),
@@ -161,6 +159,16 @@ export const integrations: Connector[] = [
     targets: [p.id],
     note: `Personal project: ${p.tagline}`,
   })),
+]
+
+// Platforms integrated at work are exactly the experience connectors on the ring, so the count can't drift from it.
+export const workPlatforms = integrations.filter((i) => i.section === 'experience')
+
+export const stats = [
+  { value: '4+', label: 'Years in production backends (since Jul 2022)' },
+  { value: String(workPlatforms.length), label: 'Third-party platforms integrated at work' },
+  { value: '30%', label: 'Performance gain from Redis + BullMQ' },
+  { value: '3', label: 'Companies, from enterprise to AI startups' },
 ]
 
 export const education = {

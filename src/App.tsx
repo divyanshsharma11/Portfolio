@@ -11,6 +11,7 @@ import { log, system } from './lib/system'
 import { setChaos, startGithub } from './lib/github'
 import { useResume } from './lib/resume'
 import { profile } from './data'
+import { coreBesideHero } from './layout'
 
 const IDS = SECTIONS.map((s) => s.id)
 const external = (url: string) => window.open(url, '_blank', 'noopener,noreferrer')
@@ -23,12 +24,13 @@ export default function App() {
   const [active, setActive] = useState<SectionId | null>(fromHash)
   const [focus, setFocus] = useState<{ id: string; n: number } | null>(null)
   const [palette, setPalette] = useState(false)
-  const [wideScreen, setWideScreen] = useState(() => window.innerWidth >= 1280)
+  // On small screens the hero covers the screen and the core becomes a dimmed backdrop (see layout.ts).
+  const [coreBeside, setCoreBeside] = useState(coreBesideHero)
   const resume = useResume()
 
   useEffect(() => startGithub(), [])
   useEffect(() => {
-    const onResize = () => setWideScreen(window.innerWidth >= 1280)
+    const onResize = () => setCoreBeside(coreBesideHero())
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -37,7 +39,8 @@ export default function App() {
   const open = useCallback((s: SectionId | null, target?: string) => {
     setActive(s)
     setFocus(target ? { id: target, n: Date.now() } : null)
-    history.replaceState(null, '', s ? `#${s}` : window.location.pathname)
+    // Only the hash changes; the path and any query string (e.g. ?utm_source=…) are kept.
+    history.replaceState(null, '', `${window.location.pathname}${window.location.search}${s ? `#${s}` : ''}`)
     if (s) log(`section.opened: ${s}${target ? ` → ${target}` : ''}`)
   }, [])
 
@@ -83,7 +86,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Core active={active} onOpen={open} dim={!active && !wideScreen} />
+      <Core active={active} onOpen={open} dim={!active && !coreBeside} />
 
       <header className="topbar">
         <button className="brand" onClick={() => open(null)}>
