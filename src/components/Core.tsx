@@ -4,6 +4,7 @@ import { integrations } from '../data'
 import { setLink, system } from '../lib/system'
 import { heroWidth, panelWidth } from '../layout'
 import { isPointerFocus } from '../lib/focus'
+import { clampTipX } from '../lib/tooltip'
 
 const TAU = Math.PI * 2
 const SPAN = TAU / SECTIONS.length
@@ -88,6 +89,8 @@ export default function Core({ active, onOpen, compact }: Props) {
       lastAng = 0,
       lastMoveT = 0
     let lastPointerAt = -Infinity // when the last press/release on the canvas happened (see lib/focus.ts)
+    let touchLeaveTimer = 0 // pending hover release after a touch ends (see onLeave)
+    const TOUCH_RELEASE_MS = 400 // far longer than the gap between pointerleave and click, short enough to look instant
     const pressAt = { x: 0, y: 0 }
     const packets: Packet[] = []
     const arrivals: number[] = []
@@ -544,6 +547,7 @@ export default function Core({ active, onOpen, compact }: Props) {
             : 'default'
     }
     const onDown = (e: PointerEvent) => {
+      window.clearTimeout(touchLeaveTimer) // a new touch cancels the pending release from the previous one
       lastPointerAt = performance.now()
       if (e.button !== 0) return
       track(e)
@@ -596,12 +600,23 @@ export default function Core({ active, onOpen, compact }: Props) {
       }
       setCursor()
     }
-    const onLeave = () => {
-      if (pressed) return
+    const release = () => {
       mouse.x = mouse.y = -1e4
       hoverSeg = hoverNode = tipNode = -1
       setTip(null)
       syncLink()
+    }
+    const onLeave = (e: PointerEvent) => {
+      if (pressed) return
+      // A finger lifting fires pointerleave right after pointerup and BEFORE the click (Pointer Events spec, 4.2.6 and
+      // 11.3). Clearing the hover here would leave the click with nothing to open, so for touch let go a moment later.
+      // A mouse never takes this path, so the desktop behaviour is unchanged.
+      if (e.pointerType === 'touch') {
+        window.clearTimeout(touchLeaveTimer)
+        touchLeaveTimer = window.setTimeout(release, TOUCH_RELEASE_MS)
+        return
+      }
+      release()
     }
     const onClick = () => {
       if (suppressClick) {
@@ -668,6 +683,7 @@ export default function Core({ active, onOpen, compact }: Props) {
     canvas.addEventListener('focus', onFocus)
     canvas.addEventListener('blur', onBlur)
     return () => {
+      window.clearTimeout(touchLeaveTimer)
       canvas.removeEventListener('keydown', onKey)
       canvas.removeEventListener('focus', onFocus)
       canvas.removeEventListener('blur', onBlur)
@@ -696,7 +712,10 @@ export default function Core({ active, onOpen, compact }: Props) {
         {live}
       </span>
       {tip && (
-        <div className="tip" style={{ left: tip.x, top: tip.y - 18 }}>
+        <div
+          className="tip"
+          style={{ left: compact ? clampTipX(tip.x, ref.current?.clientWidth ?? 0) : tip.x, top: tip.y - 18 }}
+        >
           <b>{tip.label}</b>
           <span>{tip.note}</span>
         </div>

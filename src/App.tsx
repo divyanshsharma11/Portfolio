@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Command as CmdIcon, X } from 'lucide-react'
 import Core from './components/Core'
 import Hero from './components/Hero'
+import PlatformChips from './components/PlatformChips'
 import StatusBar from './components/StatusBar'
 import { PanelBody } from './components/Panels'
 import CommandPalette, { type Command } from './components/CommandPalette'
@@ -109,6 +110,7 @@ export default function App() {
       <p className="core-hint" aria-hidden>
         Drag the core to spin it · tap a section or a dot to open it
       </p>
+      {!coreBeside && <PlatformChips onOpen={open} />}
 
       <div className="hero-wrap">
         <AnimatePresence>{!active && <Hero key="hero" onOpen={open} />}</AnimatePresence>

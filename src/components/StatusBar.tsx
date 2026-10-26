@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ago, useNow, useSystem } from '../lib/system'
 import { setChaos } from '../lib/github'
+import { coreBesideHero } from '../layout'
 
 const FEED_LABEL = { connecting: 'connecting', live: 'live', cached: 'cached', offline: 'offline' } as const
 
@@ -13,10 +14,11 @@ export default function StatusBar() {
   const lastPush = s.github?.recent[0]?.pushed_at
 
   // The first time someone breaks the site, show them the log so they can watch it recover.
+  // On phones it would cover the core, which is where the recovery shows, so there it stays opt-in.
   useEffect(() => {
     if (s.chaos && !opened.current) {
       opened.current = true
-      setOpen(true)
+      if (coreBesideHero()) setOpen(true)
     }
   }, [s.chaos])
 
