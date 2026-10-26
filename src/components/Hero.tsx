@@ -6,6 +6,7 @@ import { useResume } from '../lib/resume'
 import { profile, certification, workPlatforms } from '../data'
 import { ago, log, setLink, system, useNow, useSystem } from '../lib/system'
 import { TITLES, type SectionId } from '../sections'
+import { coreBesideHero } from '../layout'
 
 type Kind = 'string' | 'number' | 'string[]' | 'status'
 type FieldKey = 'name' | 'role' | 'yoe' | 'connected' | 'certified' | 'status'
@@ -107,6 +108,7 @@ export default function Hero({ onOpen }: { onOpen: (s: SectionId, target?: strin
   const [wires, setWires] = useState<Wire[]>([])
   const [wide, setWide] = useState(false)
   const [demo, setDemo] = useState<Demo | null>(null)
+  const [phone, setPhone] = useState(() => !coreBesideHero()) // same breakpoint as the phone layout in index.css
   const root = useRef<HTMLDivElement>(null)
   const fieldEls = useRef<Partial<Record<FieldKey, HTMLElement | null>>>({})
   const slotEls = useRef<Partial<Record<SlotId, HTMLElement | null>>>({})
@@ -155,6 +157,12 @@ export default function Hero({ onOpen }: { onOpen: (s: SectionId, target?: strin
     const t = setTimeout(() => setErr(null), 2600)
     return () => clearTimeout(t)
   }, [err])
+
+  useEffect(() => {
+    const onResize = () => setPhone(!coreBesideHero())
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   // If the hero unmounts while it is pointing at the core (e.g. a slot click opened a panel), let go of the link.
   useEffect(
@@ -305,7 +313,12 @@ export default function Hero({ onOpen }: { onOpen: (s: SectionId, target?: strin
       </div>
 
       <div className="map-grid">
-        <div className="payload" aria-label="Raw profile payload">
+        {/* Open everywhere except on phones, where it starts collapsed (with a toggle) so the card stays uncluttered. */}
+        <details className="payload" open={wide || !phone} aria-label="Raw profile payload">
+          <summary>
+            <span>Source data</span>
+            <code>profile.json</code>
+          </summary>
           <div className="brace">{'{'}</div>
           {ORDER.map((k, i) => (
             <button
@@ -331,7 +344,7 @@ export default function Hero({ onOpen }: { onOpen: (s: SectionId, target?: strin
             </button>
           ))}
           <div className="brace">{'}'}</div>
-        </div>
+        </details>
 
         <div className="gutter" aria-hidden />
 

@@ -86,7 +86,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <Core active={active} onOpen={open} dim={!active && !coreBeside} />
+      <Core active={active} onOpen={open} compact={!coreBeside} />
 
       <header className="topbar">
         <button className="brand" onClick={() => open(null)}>
@@ -105,6 +105,10 @@ export default function App() {
           <kbd>K</kbd>
         </button>
       </header>
+
+      <p className="core-hint" aria-hidden>
+        Drag the core to spin it · tap a section or a dot to open it
+      </p>
 
       <div className="hero-wrap">
         <AnimatePresence>{!active && <Hero key="hero" onOpen={open} />}</AnimatePresence>
