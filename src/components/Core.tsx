@@ -4,11 +4,13 @@ import { integrations } from '../data'
 import { setLink, system } from '../lib/system'
 import { heroWidth, panelWidth } from '../layout'
 import { isPointerFocus } from '../lib/focus'
+import { clampTipX } from '../lib/tooltip'
 
 const TAU = Math.PI * 2
 const SPAN = TAU / SECTIONS.length
 const GAP = 0.06
 const POWER_MS = 1800
+const FLARE_MS = 700
 const BAD = '#ff5d73'
 const WARN = '#ffcf5c'
 const OK = '#3ee6c4'
@@ -84,10 +86,15 @@ export default function Core({ active, onOpen, compact }: Props) {
       suppressClick = false,
       snap = false,
       lastAct: SectionId | null | undefined,
+      flare = -1, // ms into the ring that travels out when a section opens and back in when it closes; -1 = idle
+      flareOpen = true,
+      flareCol = '#ffb547',
       vel = 0,
       lastAng = 0,
       lastMoveT = 0
     let lastPointerAt = -Infinity // when the last press/release on the canvas happened (see lib/focus.ts)
+    let touchLeaveTimer = 0 // pending hover release after a touch ends (see onLeave)
+    const TOUCH_RELEASE_MS = 400 // far longer than the gap between pointerleave and click, short enough to look instant
     const pressAt = { x: 0, y: 0 }
     const packets: Packet[] = []
     const arrivals: number[] = []
@@ -176,6 +183,12 @@ export default function Core({ active, onOpen, compact }: Props) {
       }
       const act = activeRef.current
       if (act !== lastAct) {
+        // Not on first load (a #section link), not for reduced motion, and not on phones, where the panel covers the core.
+        if (lastAct !== undefined && !reduced && !compactRef.current) {
+          flare = 0
+          flareOpen = !!act
+          flareCol = act ? COLOR[act] : '#ffb547'
+        }
         lastAct = act
         snap = true // a newly opened section rotates to the top, unless the user spins the core afterwards
         vel = 0
@@ -482,6 +495,25 @@ export default function Core({ active, onOpen, compact }: Props) {
         ctx.fillText('DS', cx, cy + 1)
       }
 
+      if (flare >= 0) {
+        flare += dt
+        const f = clamp01(flare / FLARE_MS)
+        if (f >= 1) flare = -1
+        else {
+          const e = ease(f)
+          ctx.save()
+          ctx.globalAlpha = (1 - f) * 0.7
+          ctx.strokeStyle = flareCol
+          ctx.shadowColor = flareCol
+          ctx.shadowBlur = 18
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(cx, cy, R * (flareOpen ? 0.2 + 1.3 * e : 1.5 - 1.3 * e), 0, TAU)
+          ctx.stroke()
+          ctx.restore()
+        }
+      }
+
       if (hud.length) {
         ctx.globalAlpha = hudA
         for (const o of hud) {
@@ -544,6 +576,7 @@ export default function Core({ active, onOpen, compact }: Props) {
             : 'default'
     }
     const onDown = (e: PointerEvent) => {
+      window.clearTimeout(touchLeaveTimer) // a new touch cancels the pending release from the previous one
       lastPointerAt = performance.now()
       if (e.button !== 0) return
       track(e)
@@ -596,12 +629,23 @@ export default function Core({ active, onOpen, compact }: Props) {
       }
       setCursor()
     }
-    const onLeave = () => {
-      if (pressed) return
+    const release = () => {
       mouse.x = mouse.y = -1e4
       hoverSeg = hoverNode = tipNode = -1
       setTip(null)
       syncLink()
+    }
+    const onLeave = (e: PointerEvent) => {
+      if (pressed) return
+      // A finger lifting fires pointerleave right after pointerup and BEFORE the click (Pointer Events spec, 4.2.6 and
+      // 11.3). Clearing the hover here would leave the click with nothing to open, so for touch let go a moment later.
+      // A mouse never takes this path, so the desktop behaviour is unchanged.
+      if (e.pointerType === 'touch') {
+        window.clearTimeout(touchLeaveTimer)
+        touchLeaveTimer = window.setTimeout(release, TOUCH_RELEASE_MS)
+        return
+      }
+      release()
     }
     const onClick = () => {
       if (suppressClick) {
@@ -668,6 +712,7 @@ export default function Core({ active, onOpen, compact }: Props) {
     canvas.addEventListener('focus', onFocus)
     canvas.addEventListener('blur', onBlur)
     return () => {
+      window.clearTimeout(touchLeaveTimer)
       canvas.removeEventListener('keydown', onKey)
       canvas.removeEventListener('focus', onFocus)
       canvas.removeEventListener('blur', onBlur)
@@ -696,7 +741,10 @@ export default function Core({ active, onOpen, compact }: Props) {
         {live}
       </span>
       {tip && (
-        <div className="tip" style={{ left: tip.x, top: tip.y - 18 }}>
+        <div
+          className="tip"
+          style={{ left: compact ? clampTipX(tip.x, ref.current?.clientWidth ?? 0) : tip.x, top: tip.y - 18 }}
+        >
           <b>{tip.label}</b>
           <span>{tip.note}</span>
         </div>
