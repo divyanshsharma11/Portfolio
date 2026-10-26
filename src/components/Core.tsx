@@ -3,6 +3,7 @@ import { SECTIONS, type SectionId } from '../sections'
 import { integrations } from '../data'
 import { setLink, system } from '../lib/system'
 import { heroWidth, panelWidth } from '../layout'
+import { isPointerFocus } from '../lib/focus'
 
 const TAU = Math.PI * 2
 const SPAN = TAU / SECTIONS.length
@@ -86,6 +87,7 @@ export default function Core({ active, onOpen, compact }: Props) {
       vel = 0,
       lastAng = 0,
       lastMoveT = 0
+    let lastPointerAt = -Infinity // when the last press/release on the canvas happened (see lib/focus.ts)
     const pressAt = { x: 0, y: 0 }
     const packets: Packet[] = []
     const arrivals: number[] = []
@@ -542,6 +544,7 @@ export default function Core({ active, onOpen, compact }: Props) {
             : 'default'
     }
     const onDown = (e: PointerEvent) => {
+      lastPointerAt = performance.now()
       if (e.button !== 0) return
       track(e)
       hit() // taps on touch screens never produce a hover first
@@ -582,6 +585,7 @@ export default function Core({ active, onOpen, compact }: Props) {
       showTip()
     }
     const onUp = (e: PointerEvent) => {
+      lastPointerAt = performance.now()
       if (!pressed) return
       pressed = false
       if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId)
@@ -643,7 +647,11 @@ export default function Core({ active, onOpen, compact }: Props) {
       } else return
       e.preventDefault()
     }
-    const onFocus = () => select(Math.max(kb, 0))
+    // Only keyboard focus (Tab) starts the keyboard selection. Focus caused by a click or tap must leave the hover alone.
+    const onFocus = () => {
+      if (isPointerFocus(performance.now(), lastPointerAt)) return
+      select(Math.max(kb, 0))
+    }
     const onBlur = () => {
       hoverSeg = hoverNode = -1
       showTip()
