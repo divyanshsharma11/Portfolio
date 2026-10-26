@@ -59,8 +59,11 @@ export const experience = [
       'Added asynchronous message auditing and monitoring in Node.js.',
       'Moved audit data to BigQuery for easier analysis and lower logging costs.',
       'Built and optimized JSON REST APIs, standardized API templates and wrote utilities for data transformation and backward compatibility.',
+      'Migrated data from text files to databases using Java and SQL, improving data access times, and added automated schedulers for periodic updates.',
+      'Led the Node.js upgrade across microservices, resolving compatibility issues with minimal downtime.',
+      'Built event-driven Python functions on BigQuery data to automate email processing and blacklist management.',
     ],
-    tags: ['Node.js', 'REST', 'BigQuery', 'Async processing'],
+    tags: ['Node.js', 'REST', 'BigQuery', 'Async processing', 'Python', 'SQL'],
   },
 ]
 
