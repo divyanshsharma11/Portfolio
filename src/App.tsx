@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Command as CmdIcon, X } from 'lucide-react'
-import Graph, { type SectionId } from './components/Graph'
-import { PanelBody, TITLES } from './components/Panels'
+import Core from './components/Core'
+import Hero from './components/Hero'
+import StatusBar from './components/StatusBar'
+import { PanelBody } from './components/Panels'
 import CommandPalette, { type Command } from './components/CommandPalette'
+import { SECTIONS, TITLES, type SectionId } from './sections'
+import { log, system } from './lib/system'
+import { setChaos, startGithub } from './lib/github'
+import { useResume } from './lib/resume'
 import { profile } from './data'
 
-const IDS = Object.keys(TITLES) as SectionId[]
+const IDS = SECTIONS.map((s) => s.id)
+const external = (url: string) => window.open(url, '_blank', 'noopener,noreferrer')
 const fromHash = (): SectionId | null => {
   const h = window.location.hash.slice(1) as SectionId
   return IDS.includes(h) ? h : null
@@ -15,67 +22,105 @@ const fromHash = (): SectionId | null => {
 export default function App() {
   const [active, setActive] = useState<SectionId | null>(fromHash)
   const [palette, setPalette] = useState(false)
+  const [wideScreen, setWideScreen] = useState(() => window.innerWidth >= 1280)
+  const resume = useResume()
+
+  useEffect(() => startGithub(), [])
+  useEffect(() => {
+    const onResize = () => setWideScreen(window.innerWidth >= 1280)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const open = useCallback((s: SectionId | null) => {
     setActive(s)
     history.replaceState(null, '', s ? `#${s}` : window.location.pathname)
+    if (s) log(`section.opened: ${s}`)
   }, [])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); setPalette((p) => !p) }
-      else if (e.key === 'Escape' && !palette) open(null)
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPalette((p) => !p)
+      } else if (e.key === 'Escape' && !palette) open(null)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, palette])
 
-  const commands: Command[] = useMemo(() => [
-    ...IDS.map((id) => ({ id, label: `Open ${TITLES[id]}`, hint: 'section', run: () => open(id) })),
-    { id: 'home', label: 'Back to the map', hint: 'close panel', run: () => open(null) },
-    { id: 'gh', label: 'Open GitHub', hint: 'external', run: () => window.open(profile.github, '_blank') },
-    { id: 'li', label: 'Open LinkedIn', hint: 'external', run: () => window.open(profile.linkedin, '_blank') },
-    { id: 'mail', label: 'Send an email', hint: profile.email, run: () => (window.location.href = `mailto:${profile.email}`) },
-    { id: 'copy', label: 'Copy email address', hint: 'clipboard', run: () => navigator.clipboard?.writeText(profile.email) },
-  ], [open])
+  const commands: Command[] = useMemo(
+    () => [
+      ...IDS.map((id) => ({ id, label: `Open ${TITLES[id]}`, hint: 'section', run: () => open(id) })),
+      { id: 'home', label: 'Back to the core', hint: 'close panel', run: () => open(null) },
+      {
+        id: 'chaos',
+        label: 'Toggle "Break it" mode',
+        hint: 'cut GitHub, watch recovery',
+        run: () => setChaos(!system.get().chaos),
+      },
+      ...(resume ? [{ id: 'cv', label: 'Download résumé', hint: 'PDF', run: () => external(resume) }] : []),
+      { id: 'gh', label: 'Open GitHub', hint: 'external', run: () => external(profile.github) },
+      { id: 'li', label: 'Open LinkedIn', hint: 'external', run: () => external(profile.linkedin) },
+      {
+        id: 'mail',
+        label: 'Send an email',
+        hint: profile.email,
+        run: () => (window.location.href = `mailto:${profile.email}`),
+      },
+      {
+        id: 'copy',
+        label: 'Copy email address',
+        hint: 'clipboard',
+        run: () => navigator.clipboard?.writeText(profile.email),
+      },
+    ],
+    [open, resume],
+  )
 
   return (
     <div className="app">
-      <Graph onOpen={open} active={active} />
+      <Core active={active} onOpen={open} dim={!active && !wideScreen} />
 
-      <header className="hud">
-        <div>
-          <p className="eyebrow">{profile.location}</p>
-          <h1>{profile.name}</h1>
-          <p className="role">{profile.role}</p>
-        </div>
+      <header className="topbar">
+        <button className="brand" onClick={() => open(null)}>
+          divyansh<span>.</span>sharma
+        </button>
+        <nav className="topnav" aria-label="Sections">
+          {SECTIONS.map((s) => (
+            <button key={s.id} className={active === s.id ? 'on' : ''} onClick={() => open(s.id)}>
+              <i style={{ background: s.color }} />
+              {s.title}
+            </button>
+          ))}
+        </nav>
         <button className="kbd-btn" onClick={() => setPalette(true)} aria-label="Open command palette">
-          <CmdIcon size={14} /> <kbd>Ctrl</kbd><kbd>K</kbd>
+          <CmdIcon size={14} /> <kbd>Ctrl</kbd>
+          <kbd>K</kbd>
         </button>
       </header>
 
-      <AnimatePresence>
-        {!active && (
-          <motion.p className="hint" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            This is a live map of the systems I connect. Click a node, or hover the outer ones.
-          </motion.p>
-        )}
-      </AnimatePresence>
+      <div className="hero-wrap">
+        <AnimatePresence>{!active && <Hero key="hero" onOpen={open} />}</AnimatePresence>
+      </div>
 
       <AnimatePresence>
         {active && (
           <motion.aside
-            key="panel" className="panel" role="dialog" aria-label={TITLES[active]}
-            initial={{ x: 60, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 60, opacity: 0 }}
+            key="panel"
+            className="panel"
+            role="dialog"
+            aria-label={TITLES[active]}
+            initial={{ x: 60, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: 60, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 260, damping: 28 }}
           >
             <div className="panel-top">
-              <nav>
-                {IDS.map((id) => (
-                  <button key={id} className={id === active ? 'on' : ''} onClick={() => open(id)}>{TITLES[id]}</button>
-                ))}
-              </nav>
-              <button className="close" onClick={() => open(null)} aria-label="Close"><X size={18} /></button>
+              <span className="panel-path">core / {active}</span>
+              <button className="close" onClick={() => open(null)} aria-label="Close">
+                <X size={18} />
+              </button>
             </div>
             <div className="panel-body">
               <h2>{TITLES[active]}</h2>
@@ -86,6 +131,8 @@ export default function App() {
           </motion.aside>
         )}
       </AnimatePresence>
+
+      <StatusBar />
 
       <AnimatePresence>
         {palette && <CommandPalette commands={commands} onClose={() => setPalette(false)} />}

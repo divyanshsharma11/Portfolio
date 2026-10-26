@@ -4,13 +4,12 @@
 
 **Backend & Integration Engineer**: OAuth flows, webhooks, queues and data sync.
 
-This portfolio is not a scrolling page. It is a live map of the systems I connect.
+This portfolio is not a scrolling page. It is a small integration layer you can poke at: raw data on one side, a readable profile on the other, and a live core in the middle.
 
 ![React](https://img.shields.io/badge/React-18-61dafb?logo=react&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-5-646cff?logo=vite&logoColor=white)
-![Framer Motion](https://img.shields.io/badge/Framer_Motion-animations-ff4f9a)
-![License](https://img.shields.io/badge/license-see_LICENSE-lightgrey)
+![Tests](https://img.shields.io/badge/tests-vitest-6e9f18?logo=vitest&logoColor=white)
 
 [GitHub](https://github.com/divyanshsharma11) · [LinkedIn](https://www.linkedin.com/in/divyansh-sharma1121/) · [Email](mailto:divyanshsharma1121@gmail.com)
 
@@ -20,57 +19,67 @@ This portfolio is not a scrolling page. It is a live map of the systems I connec
 
 ## What you can do on the site
 
-| Interaction | What happens |
-| --- | --- |
-| **Hover an outer node** | Shows what I built with that integration (Calendly, HubSpot, Stripe, Gmail, Pub/Sub, Redis, MongoDB and more). |
-| **Click a section node** | Opens About, Experience, Projects, Pipeline Lab or Contact in a side panel. The map stays alive behind it. |
-| **Move your mouse** | The graph shifts in layered parallax while data packets flow from integrations to the centre. |
-| **Press `Ctrl` + `K`** | Opens a command palette to jump between sections, open links or copy my email. |
-| **Fire a webhook in the Pipeline Lab** | Watch an event move through API → Queue → Worker → MongoDB. |
-| **Share a link like `/#projects`** | Opens the site straight on that section. |
+| Interaction                           | What happens                                                                                                                                                                                       |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Read the card**                     | Name, role, experience, integrations, credential and availability are visible in the first screen.                                                                                                 |
+| **Drag a field onto the card**        | The left side is a raw `profile.json`. Drag a field onto a slot (or click a field, then a slot) to remap it. Types are validated: dropping a number on a name slot is rejected with a `TypeError`. |
+| **Hover or click the core**           | Hover an outer connector to see what I built with that integration. Click a segment to open About, Experience, Projects, Pipeline Lab or Contact in a side panel.                                  |
+| **Flip "Break it" in the status bar** | Cuts the site's live GitHub connection on purpose. Watch retries, the circuit breaker opening, the fallback to cached data and the automatic recovery in the event log.                            |
+| **Press `Ctrl` + `K`**                | Command palette: jump to a section, toggle Break it, open links, download the résumé.                                                                                                              |
+| **Share a link like `/#projects`**    | Opens straight on that section.                                                                                                                                                                    |
+
+Everything the core's readouts show (GitHub state, breaker state, packet flux) is the site's real state.
 
 <details>
-<summary><b>Try this in the Pipeline Lab</b> (click to expand)</summary>
+<summary><b>What "Break it" really does</b> (click to expand)</summary>
 
 <br>
 
-1. Click **Fire webhook** and watch the event go through every stage to `done`.
-2. Click **Send duplicate**. The idempotent upsert catches it, and it ends as `deduped`.
-3. Turn on **Simulate MongoDB outage** and fire again. The worker retries with exponential backoff (600 ms → 1.2 s → 2.4 s) and, after 4 attempts, the job fails.
-4. Turn the outage off mid-retry. The next attempt succeeds.
+The GitHub card and the core read live data through [`src/lib/github.ts`](src/lib/github.ts):
 
-> **Note:** the lab is a simulation that runs entirely in the browser. It models the architecture of my [Calendly integration service](https://github.com/divyanshsharma11/calendlyIntegration). No real servers are called, and the timings are illustrative.
+1. Every request is retried twice with backoff (500 ms, then 1 s).
+2. Three consecutive failures **open the circuit breaker** and pause calls for 8 s.
+3. While degraded, the site serves the last good response from `localStorage`, labelled **cached**, or an **offline** state if there is nothing cached.
+4. After the cooldown the breaker goes **half-open**, sends one trial request and, if it succeeds, **closes** again.
+
+"Break it" injects the failure just before the request goes out. Everything after that is the real recovery path, and it is covered by unit tests.
+
+</details>
+
+<details>
+<summary><b>The Pipeline Lab</b> (click to expand)</summary>
+
+<br>
+
+A simulation of the webhook architecture behind my [Calendly integration service](https://github.com/divyanshsharma11/calendlyIntegration): acknowledge fast, process in a separate worker, retry with exponential backoff, upsert idempotently.
+
+1. **Fire webhook**: an event moves through API → Queue → Worker → MongoDB.
+2. **Send duplicate**: the idempotent upsert catches it (`deduped`).
+3. **Simulate MongoDB outage**: the worker retries with backoff (600 ms, 1.2 s, 2.4 s) and fails the job after 4 attempts.
+
+> It runs entirely in the browser and is labelled as a simulation in the UI. No real servers are called and the timings are illustrative.
 
 </details>
 
 ---
 
-## The architecture the Pipeline Lab models
-
-```mermaid
-flowchart LR
-    C[Calendly] -- webhook --> A[Express API]
-    A -- "persist WebhookLog<br/>200 OK fast" --> C
-    A -- enqueue --> Q[(Redis / BullMQ)]
-    Q --> W[Worker]
-    W -- idempotent upsert --> M[(MongoDB)]
-    W -. "failure: retry with<br/>exponential backoff" .-> Q
-```
-
-Acknowledging fast and processing in a separate worker keeps the webhook endpoint quick. Retries and idempotent writes make the pipeline safe against outages and duplicate deliveries.
-
----
-
-## How the site is built
+## Architecture
 
 ```mermaid
 flowchart TD
-    App[App.tsx<br/>state, URL hash, shortcuts] --> Graph[Graph.tsx<br/>canvas map, packets, hit-testing]
+    App[App.tsx<br/>section state, URL hash, shortcuts] --> Hero[Hero.tsx<br/>payload to card mapping]
+    App --> Core[Core.tsx<br/>canvas core, rings, packets]
     App --> Panels[Panels.tsx<br/>section content]
-    App --> Palette[CommandPalette.tsx<br/>Ctrl+K]
+    App --> Status[StatusBar.tsx<br/>feed state, Break it, event log]
     Panels --> Lab[PipelineLab.tsx<br/>webhook simulation]
-    Panels --> GH[(GitHub REST API<br/>live repo data)]
-    Data[data.ts<br/>all text content] --> Panels
+    Core --> Sys[(lib/system.ts<br/>shared store)]
+    Status --> Sys
+    Panels --> Sys
+    GH[lib/github.ts<br/>retry, circuit breaker, cache] --> Sys
+    GH --> API[(GitHub REST API)]
+    Data[data.ts<br/>all content] --> Hero
+    Data --> Panels
+    Data --> Core
 ```
 
 <details>
@@ -78,29 +87,25 @@ flowchart TD
 
 ```text
 src/
-├── App.tsx                  # layout, active section, URL hash, keyboard shortcuts
+├── App.tsx                  # layout, active section, URL hash, shortcuts, command list
 ├── data.ts                  # all portfolio content: edit this to update the site
+├── sections.ts              # section ids, titles and colours
 ├── index.css                # design tokens and styles
-├── main.tsx                 # entry point
+├── main.tsx                 # entry point, error boundary, self-hosted fonts
+├── lib/
+│   ├── system.ts            # shared store: breaker/feed state, event log
+│   ├── github.ts            # GitHub client: retry, circuit breaker, cache, validation
+│   ├── github.test.ts       # unit tests for the above
+│   └── resume.ts            # shows résumé buttons only if the PDF exists
 └── components/
-    ├── Graph.tsx            # canvas-rendered integration map
-    ├── Panels.tsx           # About, Experience, Projects, Contact panels + live GitHub card
-    ├── PipelineLab.tsx      # interactive webhook pipeline simulation
-    └── CommandPalette.tsx   # Ctrl+K command palette
+    ├── Core.tsx             # canvas-rendered integration core
+    ├── Hero.tsx             # raw payload to readable card mapping
+    ├── Panels.tsx           # About, Experience, Projects, Contact panels
+    ├── PipelineLab.tsx      # webhook pipeline simulation
+    ├── StatusBar.tsx        # live status, Break it switch, event log
+    ├── CommandPalette.tsx   # Ctrl+K palette
+    └── ErrorBoundary.tsx    # readable fallback if rendering fails
 ```
-
-</details>
-
-<details>
-<summary><b>Technical notes</b></summary>
-
-<br>
-
-- **Rendering:** the map is drawn on a single `<canvas>` with `requestAnimationFrame`, scaled for high-DPI screens and resized with a `ResizeObserver`.
-- **Motion:** nodes ease toward their orbit positions, so the layout stays smooth on resize and when a panel opens. Ambient packets are turned off when the OS asks for reduced motion.
-- **Live data:** the Projects panel fetches public repo stats from the GitHub API and hides itself if the request fails or is rate-limited.
-- **Accessibility:** keyboard shortcuts, `Esc` to close, labelled dialogs, visible focus rings, and an `aria-live` log in the Pipeline Lab.
-- **No backend:** everything is static and can be hosted on any static host.
 
 </details>
 
@@ -117,16 +122,28 @@ npm install
 npm run dev        # http://localhost:5173
 ```
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the dev server with hot reload |
-| `npm run build` | Type-check and build to `dist/` |
-| `npm run preview` | Serve the production build locally |
-| `npm run lint` | Run ESLint |
+| Command           | Purpose                                         |
+| ----------------- | ----------------------------------------------- |
+| `npm run dev`     | Dev server with hot reload                      |
+| `npm run build`   | Type-check and build to `dist/`                 |
+| `npm run preview` | Serve the production build locally              |
+| `npm test`        | Run the unit tests                              |
+| `npm run lint`    | ESLint                                          |
+| `npm run format`  | Format with Prettier (`format:check` to verify) |
+
+CI (`.github/workflows/ci.yml`) runs formatting, lint, tests, the build and a production-dependency audit on every push and pull request.
 
 ## Update the content
 
-All text lives in [`src/data.ts`](src/data.ts): profile, stats, experience, projects and skills. Edit it and the site updates. No component changes are needed.
+All text lives in [`src/data.ts`](src/data.ts): profile, stats, experience, projects, skills and the integrations shown on the core. The résumé is served from `public/Divyansh-Sharma-Resume.pdf`; the buttons appear only when that file exists.
+
+## Security and privacy
+
+- No backend, no secrets, no cookies, no analytics. The event log stays in memory in your browser.
+- The only network call is to the public GitHub API. Responses and cached data are validated (shape and `https://github.com/` links) before they are rendered.
+- Fonts are self-hosted, so visitors' IPs are not sent to a font CDN.
+- Production builds ship a strict Content-Security-Policy (`default-src 'self'`, `connect-src` limited to `api.github.com`). Hosts that support response headers should also send it as a header, plus `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and `X-Frame-Options: DENY`.
+- External links use `rel="noreferrer"` / `noopener`.
 
 ## Deploy
 
