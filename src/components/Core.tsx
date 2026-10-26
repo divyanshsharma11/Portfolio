@@ -10,6 +10,7 @@ const TAU = Math.PI * 2
 const SPAN = TAU / SECTIONS.length
 const GAP = 0.06
 const POWER_MS = 1800
+const FLARE_MS = 700
 const BAD = '#ff5d73'
 const WARN = '#ffcf5c'
 const OK = '#3ee6c4'
@@ -85,6 +86,9 @@ export default function Core({ active, onOpen, compact }: Props) {
       suppressClick = false,
       snap = false,
       lastAct: SectionId | null | undefined,
+      flare = -1, // ms into the ring that travels out when a section opens and back in when it closes; -1 = idle
+      flareOpen = true,
+      flareCol = '#ffb547',
       vel = 0,
       lastAng = 0,
       lastMoveT = 0
@@ -179,6 +183,12 @@ export default function Core({ active, onOpen, compact }: Props) {
       }
       const act = activeRef.current
       if (act !== lastAct) {
+        // Not on first load (a #section link), not for reduced motion, and not on phones, where the panel covers the core.
+        if (lastAct !== undefined && !reduced && !compactRef.current) {
+          flare = 0
+          flareOpen = !!act
+          flareCol = act ? COLOR[act] : '#ffb547'
+        }
         lastAct = act
         snap = true // a newly opened section rotates to the top, unless the user spins the core afterwards
         vel = 0
@@ -483,6 +493,25 @@ export default function Core({ active, onOpen, compact }: Props) {
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
         ctx.fillText('DS', cx, cy + 1)
+      }
+
+      if (flare >= 0) {
+        flare += dt
+        const f = clamp01(flare / FLARE_MS)
+        if (f >= 1) flare = -1
+        else {
+          const e = ease(f)
+          ctx.save()
+          ctx.globalAlpha = (1 - f) * 0.7
+          ctx.strokeStyle = flareCol
+          ctx.shadowColor = flareCol
+          ctx.shadowBlur = 18
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(cx, cy, R * (flareOpen ? 0.2 + 1.3 * e : 1.5 - 1.3 * e), 0, TAU)
+          ctx.stroke()
+          ctx.restore()
+        }
       }
 
       if (hud.length) {
