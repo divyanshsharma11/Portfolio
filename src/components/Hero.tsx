@@ -6,7 +6,7 @@ import { useResume } from '../lib/resume'
 import { profile, certification, workPlatforms } from '../data'
 import { ago, log, setLink, system, useNow, useSystem } from '../lib/system'
 import { TITLES, type SectionId } from '../sections'
-import { coreBesideHero } from '../layout'
+import { coreBesideHero, mapMinWidth } from '../layout'
 
 type Kind = 'string' | 'number' | 'string[]' | 'status'
 type FieldKey = 'name' | 'role' | 'yoe' | 'connected' | 'certified' | 'status'
@@ -126,7 +126,7 @@ export default function Hero({ onOpen }: { onOpen: (s: SectionId, target?: strin
 
   const measure = useCallback(() => {
     const el = root.current
-    if (!el || el.clientWidth < 600) return setWires([])
+    if (!el || el.clientWidth < mapMinWidth()) return setWires([])
     setWires(
       SLOTS.map((s) => {
         const from = anchor(map[s.id])
@@ -143,7 +143,7 @@ export default function Hero({ onOpen }: { onOpen: (s: SectionId, target?: strin
   useLayoutEffect(() => {
     const el = root.current!
     const ro = new ResizeObserver(() => {
-      setWide(el.clientWidth >= 600)
+      setWide(el.clientWidth >= mapMinWidth())
       measure()
     })
     ro.observe(el)
