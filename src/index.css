@@ -216,7 +216,7 @@ kbd {
 @media (min-width: 1280px) {
   .hero-wrap {
     right: auto;
-    width: min(780px, 50vw);
+    width: min(780px, max(46vw, 660px));
     padding: 12px 8px 12px 36px;
     justify-content: flex-start;
   }
